@@ -16,7 +16,7 @@ const term = new Terminal({
   fontFamily: '"SFMono Nerd Font", Menlo, Monaco, "Courier New", monospace',
   fontSize: 14,
   theme: {
-    background: "#1e1e1e",
+    background: "rgb(45 45 45)",
     foreground: "#d4d4d4",
     cursor: "#fff",
   },
