@@ -1,0 +1,1210 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>xterm.js and Web Terminal Field Notes</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --paper: oklch(98% 0.01 178);
+      --paper-2: oklch(95.5% 0.018 172);
+      --ink: oklch(20% 0.035 222);
+      --muted: oklch(45% 0.035 222);
+      --line: oklch(84% 0.025 190);
+      --panel: oklch(99% 0.006 178);
+      --terminal: oklch(18% 0.04 200);
+      --terminal-ink: oklch(91% 0.028 162);
+      --green: oklch(55% 0.14 155);
+      --amber: oklch(72% 0.15 72);
+      --red: oklch(58% 0.18 28);
+      --blue: oklch(55% 0.13 238);
+      --violet: oklch(54% 0.13 305);
+      --shadow: 0 18px 48px oklch(30% 0.05 210 / 0.13);
+      --radius: 8px;
+      --space-xs: 4px;
+      --space-sm: 8px;
+      --space-md: 12px;
+      --space-lg: 16px;
+      --space-xl: 24px;
+      --space-2xl: 32px;
+      --space-3xl: 48px;
+      --space-4xl: 64px;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      margin: 0;
+      background:
+        linear-gradient(140deg, oklch(98% 0.012 178), oklch(96% 0.018 120) 42%, oklch(97% 0.018 65));
+      color: var(--ink);
+      font-family: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+      line-height: 1.68;
+      letter-spacing: 0;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    code,
+    pre,
+    .mono {
+      font-family: "SFMono-Regular", Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+    }
+
+    .page {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: var(--space-3xl) 0 var(--space-4xl);
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+      gap: clamp(24px, 5vw, 72px);
+      align-items: center;
+      min-height: 78vh;
+      padding: var(--space-xl) 0 var(--space-3xl);
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      color: var(--muted);
+      font-size: 0.8rem;
+      font-weight: 750;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .eyebrow::before {
+      content: "";
+      width: 9px;
+      height: 9px;
+      background: var(--green);
+      border-radius: 50%;
+      box-shadow: 16px 0 0 var(--amber), 32px 0 0 var(--red);
+    }
+
+    h1,
+    h2,
+    h3 {
+      margin: 0;
+      line-height: 1.08;
+      letter-spacing: 0;
+    }
+
+    h1 {
+      max-width: 12ch;
+      margin-top: var(--space-xl);
+      font-family: "Avenir Next Condensed", "Arial Narrow", "Avenir Next", sans-serif;
+      font-size: clamp(3.4rem, 9vw, 8.2rem);
+      font-weight: 900;
+    }
+
+    h2 {
+      font-size: clamp(2rem, 4.6vw, 4.4rem);
+      font-family: "Avenir Next Condensed", "Arial Narrow", "Avenir Next", sans-serif;
+      font-weight: 900;
+    }
+
+    h3 {
+      font-size: 1.15rem;
+      font-weight: 820;
+    }
+
+    p {
+      margin: 0;
+    }
+
+    .lead {
+      max-width: 64ch;
+      margin-top: var(--space-xl);
+      color: var(--muted);
+      font-size: clamp(1rem, 2vw, 1.24rem);
+    }
+
+    .hero-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      margin-top: var(--space-2xl);
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-sm);
+      padding: 9px 13px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: oklch(99% 0.008 178 / 0.78);
+      color: var(--muted);
+      font-size: 0.88rem;
+      font-weight: 720;
+      text-decoration: none;
+    }
+
+    .terminal-card {
+      overflow: hidden;
+      border: 1px solid oklch(35% 0.05 205);
+      border-radius: 8px;
+      background: var(--terminal);
+      box-shadow: var(--shadow);
+    }
+
+    .terminal-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 12px;
+      background: oklch(24% 0.04 205);
+      color: oklch(76% 0.03 190);
+      font-size: 0.78rem;
+    }
+
+    .dots {
+      display: inline-flex;
+      gap: 7px;
+    }
+
+    .dots span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--red);
+    }
+
+    .dots span:nth-child(2) {
+      background: var(--amber);
+    }
+
+    .dots span:nth-child(3) {
+      background: var(--green);
+    }
+
+    .terminal-body {
+      min-height: 350px;
+      padding: var(--space-xl);
+      color: var(--terminal-ink);
+      font-size: clamp(0.78rem, 1.5vw, 0.95rem);
+      line-height: 1.62;
+      white-space: pre-wrap;
+    }
+
+    .prompt {
+      color: oklch(76% 0.15 150);
+      font-weight: 800;
+    }
+
+    .term-dim {
+      color: oklch(72% 0.028 190);
+    }
+
+    .term-red {
+      color: oklch(72% 0.18 30);
+    }
+
+    .section {
+      display: grid;
+      grid-template-columns: 260px minmax(0, 1fr);
+      gap: clamp(24px, 5vw, 60px);
+      padding: var(--space-4xl) 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .section-kicker {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      display: grid;
+      gap: var(--space-md);
+    }
+
+    .section-number {
+      width: 44px;
+      height: 44px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--paper);
+      font-weight: 900;
+    }
+
+    .section-kicker p {
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    .content {
+      display: grid;
+      gap: var(--space-xl);
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: var(--space-lg);
+    }
+
+    .card {
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: oklch(99% 0.007 178 / 0.86);
+      padding: var(--space-xl);
+      box-shadow: 0 10px 26px oklch(42% 0.04 195 / 0.07);
+    }
+
+    .card h3 {
+      margin-bottom: var(--space-md);
+    }
+
+    .card p,
+    .card li {
+      color: var(--muted);
+    }
+
+    .tag {
+      display: inline-flex;
+      width: fit-content;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: color-mix(in oklch, var(--green) 12%, white);
+      color: oklch(34% 0.11 155);
+      font-size: 0.74rem;
+      font-weight: 850;
+      text-transform: uppercase;
+    }
+
+    .diagram {
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+      box-shadow: var(--shadow);
+    }
+
+    .diagram svg {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+
+    .caption {
+      padding: var(--space-md) var(--space-lg) var(--space-lg);
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .table {
+      overflow-x: auto;
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 720px;
+    }
+
+    th,
+    td {
+      padding: 13px 14px;
+      text-align: left;
+      vertical-align: top;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      background: oklch(94.5% 0.018 172);
+      color: var(--ink);
+      font-size: 0.82rem;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    tr:last-child td {
+      border-bottom: 0;
+    }
+
+    td {
+      color: var(--muted);
+    }
+
+    td strong {
+      color: var(--ink);
+    }
+
+    pre {
+      overflow: auto;
+      margin: 0;
+      padding: var(--space-lg);
+      border-radius: var(--radius);
+      background: oklch(17% 0.035 210);
+      color: oklch(92% 0.03 160);
+      font-size: 0.86rem;
+      line-height: 1.62;
+    }
+
+    .code-title {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: var(--space-lg);
+      padding: 10px 14px;
+      border-radius: var(--radius) var(--radius) 0 0;
+      background: oklch(24% 0.04 210);
+      color: oklch(82% 0.03 180);
+      font-size: 0.78rem;
+      font-weight: 760;
+    }
+
+    .code-block pre {
+      border-radius: 0 0 var(--radius) var(--radius);
+    }
+
+    .two-col {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: var(--space-lg);
+    }
+
+    .list {
+      display: grid;
+      gap: var(--space-md);
+      margin: 0;
+      padding: 0;
+      list-style: none;
+    }
+
+    .list li {
+      display: grid;
+      grid-template-columns: 28px 1fr;
+      gap: var(--space-md);
+      align-items: start;
+      color: var(--muted);
+    }
+
+    .mark {
+      width: 28px;
+      height: 28px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      background: color-mix(in oklch, var(--amber) 20%, white);
+      color: oklch(42% 0.12 72);
+      font-weight: 900;
+    }
+
+    .callout {
+      display: grid;
+      gap: var(--space-md);
+      padding: var(--space-xl);
+      border: 1px solid color-mix(in oklch, var(--green) 30%, var(--line));
+      border-radius: var(--radius);
+      background: color-mix(in oklch, var(--green) 7%, white);
+    }
+
+    .callout strong {
+      color: oklch(35% 0.1 155);
+    }
+
+    .debug-flow {
+      display: grid;
+      gap: var(--space-sm);
+      counter-reset: debug;
+    }
+
+    .debug-step {
+      display: flex;
+      align-items: center;
+      gap: var(--space-md);
+      padding: var(--space-md) var(--space-lg);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--panel);
+    }
+
+    .debug-step::before {
+      counter-increment: debug;
+      content: counter(debug);
+      width: 34px;
+      height: 34px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      background: var(--ink);
+      color: var(--paper);
+      font-weight: 900;
+      flex: none;
+      font-size: 0.85rem;
+    }
+
+    .footer {
+      display: grid;
+      gap: var(--space-lg);
+      padding: var(--space-3xl);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      background: var(--ink);
+      color: oklch(94% 0.014 178);
+    }
+
+    .footer p {
+      max-width: 80ch;
+      color: oklch(78% 0.03 190);
+    }
+
+    @media (max-width: 880px) {
+      .hero,
+      .section,
+      .two-col {
+        grid-template-columns: 1fr;
+      }
+
+      .hero {
+        min-height: auto;
+      }
+
+      .section-kicker {
+        position: static;
+      }
+    }
+
+    @media print {
+      body {
+        background: white;
+      }
+
+      .page {
+        width: 100%;
+        padding: 0;
+      }
+
+      .hero {
+        min-height: auto;
+      }
+
+      .section {
+        break-inside: avoid;
+      }
+
+      .terminal-card,
+      .diagram,
+      .card,
+      .table,
+      pre {
+        box-shadow: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="page">
+    <header class="hero">
+      <div>
+        <div class="eyebrow">Web Terminal Field Notes</div>
+        <h1>xterm.js and Terminal Systems</h1>
+        <p class="lead">
+          A practical review sheet for frontend and full-stack engineers: from xterm.js rendering, to shells, PTYs, WebSockets, resize handling, ANSI sequences, echo, and debugging.
+        </p>
+        <div class="hero-actions" aria-label="Section navigation">
+          <a class="pill" href="#mental-model">Mental Model</a>
+          <a class="pill" href="#io">Input / Output</a>
+          <a class="pill" href="#pty">PTY</a>
+          <a class="pill" href="#web-terminal">Minimal Web Terminal</a>
+          <a class="pill" href="#deep">Deeper Topics</a>
+          <a class="pill" href="#debug">Debug Checklist</a>
+        </div>
+      </div>
+
+      <div class="terminal-card" aria-label="Terminal visual example">
+        <div class="terminal-top">
+          <span class="dots"><span></span><span></span><span></span></span>
+          <span class="mono">learn-xterm / zsh</span>
+        </div>
+        <div class="terminal-body mono"><span class="prompt">➜</span> npm run recall
+<span class="term-dim">loading terminal mental model...</span>
+<span class="prompt">✓</span> xterm.js = terminal emulator
+<span class="prompt">✓</span> shell = command interpreter
+<span class="prompt">✓</span> PTY = fake terminal device for real shell
+<span class="prompt">✓</span> WebSocket = browser/server transport
+
+<span class="prompt">$</span> printf "\x1b[31merror\x1b[0m\n"
+<span class="term-red">error</span>
+
+<span class="prompt">$</span> echo "input is not display"
+input is not display
+<span class="prompt">$</span> <span class="term-dim">cursor waits here</span></div>
+      </div>
+    </header>
+
+    <section class="section" id="mental-model">
+      <aside class="section-kicker">
+        <div class="section-number">01</div>
+        <h2>Mental Model</h2>
+        <p>First separate display, command interpretation, and process management.</p>
+      </aside>
+
+      <div class="content">
+        <div class="cards">
+          <article class="card">
+            <span class="tag">xterm.js</span>
+            <h3>What it is</h3>
+            <p>
+              xterm.js is a terminal emulator that runs in the browser. Think of it as a terminal screen plus keyboard input layer: it renders characters, colors, cursors, scrollback, and exposes user input as a data stream.
+            </p>
+          </article>
+          <article class="card">
+            <span class="tag">not shell</span>
+            <h3>What it is not</h3>
+            <p>
+              It is not a shell. It does not execute <code>ls</code>, <code>cd</code>, or <code>npm run dev</code>, and it does not access the file system or manage real processes.
+            </p>
+          </article>
+          <article class="card">
+            <span class="tag">boundary</span>
+            <h3>The one sentence to remember</h3>
+            <p>
+              xterm.js handles terminal-like display and input; the shell understands commands and produces results; the PTY makes the shell believe it is attached to a real terminal.
+            </p>
+          </article>
+        </div>
+
+        <figure class="diagram">
+          <svg viewBox="0 0 980 430" role="img" aria-label="Web Terminal data flow overview">
+            <defs>
+              <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L9,3 z" fill="oklch(38% 0.05 220)" />
+              </marker>
+              <style>
+                .box{fill:oklch(99% 0.006 178);stroke:oklch(76% 0.03 190);stroke-width:2}
+                .box2{fill:oklch(94% 0.045 155);stroke:oklch(55% 0.14 155);stroke-width:2}
+                .box3{fill:oklch(95% 0.045 70);stroke:oklch(68% 0.15 72);stroke-width:2}
+                .txt{font:700 22px Avenir Next, sans-serif;fill:oklch(20% 0.035 222)}
+                .sub{font:500 15px Avenir Next, sans-serif;fill:oklch(45% 0.035 222)}
+                .wire{fill:none;stroke:oklch(38% 0.05 220);stroke-width:3;marker-end:url(#arrow)}
+              </style>
+            </defs>
+            <rect x="35" y="70" width="150" height="98" rx="8" class="box2" />
+            <text x="110" y="112" text-anchor="middle" class="txt">Keyboard</text>
+            <text x="110" y="141" text-anchor="middle" class="sub">user keys</text>
+
+            <rect x="250" y="48" width="180" height="142" rx="8" class="box" />
+            <text x="340" y="102" text-anchor="middle" class="txt">xterm.js</text>
+            <text x="340" y="132" text-anchor="middle" class="sub">onData / write</text>
+            <text x="340" y="158" text-anchor="middle" class="sub">display + input API</text>
+
+            <rect x="500" y="48" width="170" height="142" rx="8" class="box3" />
+            <text x="585" y="102" text-anchor="middle" class="txt">WebSocket</text>
+            <text x="585" y="132" text-anchor="middle" class="sub">bidirectional link</text>
+            <text x="585" y="158" text-anchor="middle" class="sub">input / resize</text>
+
+            <rect x="740" y="48" width="190" height="142" rx="8" class="box" />
+            <text x="835" y="98" text-anchor="middle" class="txt">Node.js</text>
+            <text x="835" y="128" text-anchor="middle" class="sub">protocol parsing</text>
+            <text x="835" y="154" text-anchor="middle" class="sub">session management</text>
+
+            <rect x="500" y="265" width="170" height="104" rx="8" class="box2" />
+            <text x="585" y="309" text-anchor="middle" class="txt">node-pty</text>
+            <text x="585" y="338" text-anchor="middle" class="sub">pseudo-terminal</text>
+
+            <rect x="740" y="265" width="190" height="104" rx="8" class="box" />
+            <text x="835" y="309" text-anchor="middle" class="txt">zsh / bash</text>
+            <text x="835" y="338" text-anchor="middle" class="sub">real shell</text>
+
+            <path d="M185 119 H248" class="wire" />
+            <path d="M430 119 H498" class="wire" />
+            <path d="M670 119 H738" class="wire" />
+            <path d="M835 190 V263" class="wire" />
+            <path d="M740 317 H672" class="wire" />
+            <path d="M500 317 C395 317 360 230 360 192" class="wire" />
+
+            <text x="465" y="32" class="sub">input: key data</text>
+            <text x="382" y="365" class="sub">output: ANSI/text</text>
+          </svg>
+          <figcaption class="caption">
+            The main path of a real Web Terminal: input starts at xterm.js, travels through WebSocket into the PTY, then shell output comes back through the PTY and is rendered by xterm.js.
+          </figcaption>
+        </figure>
+
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Layer</th>
+                <th>Responsible for</th>
+                <th>Not responsible for</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>xterm.js</strong></td>
+                <td>Rendering characters, colors, cursors; parsing ANSI; listening for input; maintaining scrollback.</td>
+                <td>Executing commands, starting processes, understanding <code>cd</code>, reading the file system.</td>
+              </tr>
+              <tr>
+                <td><strong>Frontend app</strong></td>
+                <td>Creating Terminal and WebSocket instances, bridging I/O, syncing resize events.</td>
+                <td>After connecting a real PTY, it should not echo input or parse complex control keys.</td>
+              </tr>
+              <tr>
+                <td><strong>node-pty</strong></td>
+                <td>Creating a pseudo-terminal, writing input to the shell, reading shell output back.</td>
+                <td>It does not render text or understand command semantics.</td>
+              </tr>
+              <tr>
+                <td><strong>shell</strong></td>
+                <td>Parsing commands, maintaining cwd/env, generating prompts, history/completion, starting programs.</td>
+                <td>It does not draw the terminal UI in the browser.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="io">
+      <aside class="section-kicker">
+        <div class="section-number">02</div>
+        <h2>Input / Output</h2>
+        <p>A terminal is a cursor model, not a normal HTML text flow.</p>
+      </aside>
+
+      <div class="content">
+        <div class="two-col">
+          <div class="code-block">
+            <div class="code-title"><span>Minimal initialization</span><span class="mono">browser</span></div>
+            <pre><code>import { Terminal } from "@xterm/xterm";
+import "@xterm/xterm/css/xterm.css";
+
+const dom = document.getElementById("terminal");
+if (!dom) throw new Error("#terminal not found");
+
+const term = new Terminal();
+term.open(dom);
+term.write("Hello xterm.js\r\n$ ");</code></pre>
+          </div>
+
+          <div class="code-block">
+            <div class="code-title"><span>write and line breaks</span><span class="mono">cursor model</span></div>
+            <pre><code>term.write("A");
+term.write("B\n");
+term.write("C");
+term.write("D\r\n");
+term.write("E");
+
+// Result is roughly:
+// AB
+//   CD
+// E</code></pre>
+          </div>
+        </div>
+
+        <figure class="diagram">
+          <svg viewBox="0 0 980 320" role="img" aria-label="Cursor behavior for line feed and carriage return">
+            <defs>
+              <style>
+                .grid{stroke:oklch(86% 0.025 190);stroke-width:1}
+                .label{font:800 24px Avenir Next, sans-serif;fill:oklch(20% 0.035 222)}
+                .small{font:500 15px Avenir Next, sans-serif;fill:oklch(45% 0.035 222)}
+                .cell{fill:oklch(99% 0.006 178);stroke:oklch(82% 0.025 190)}
+                .char{font:800 26px SFMono-Regular, monospace;fill:oklch(20% 0.035 222)}
+                .cursor{fill:oklch(55% 0.14 155)}
+              </style>
+            </defs>
+            <text x="65" y="50" class="label">\n</text>
+            <text x="115" y="50" class="small">moves down one row, keeps current column</text>
+            <text x="540" y="50" class="label">\r\n</text>
+            <text x="610" y="50" class="small">returns to column 0, then moves down</text>
+
+            <g transform="translate(70 86)">
+              <rect width="300" height="150" rx="8" fill="oklch(99% 0.006 178)" stroke="oklch(82% 0.025 190)" />
+              <text x="30" y="48" class="char">A</text>
+              <text x="62" y="48" class="char">B</text>
+              <text x="94" y="96" class="char">C</text>
+              <rect x="126" y="72" width="12" height="32" class="cursor" />
+              <text x="30" y="132" class="small">write "AB\nC"</text>
+            </g>
+
+            <g transform="translate(545 86)">
+              <rect width="300" height="150" rx="8" fill="oklch(99% 0.006 178)" stroke="oklch(82% 0.025 190)" />
+              <text x="30" y="48" class="char">A</text>
+              <text x="62" y="48" class="char">B</text>
+              <text x="30" y="96" class="char">C</text>
+              <rect x="62" y="72" width="12" height="32" class="cursor" />
+              <text x="30" y="132" class="small">write "AB\r\nC"</text>
+            </g>
+          </svg>
+          <figcaption class="caption">
+            <code>\n</code> is line feed: it only moves down one row. <code>\r</code> is carriage return: it returns to the beginning of the current row. In terminals, <code>\r\n</code> commonly means “move to the beginning of the next line.”
+          </figcaption>
+        </figure>
+
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Input</th>
+                <th>Common onData value</th>
+                <th>How to think about it while learning</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Printable characters</td>
+                <td><code>"a"</code>、<code>"1"</code></td>
+                <td>In a fake echo terminal you may call <code>term.write(data)</code>; after connecting a PTY, send it to the backend unchanged.</td>
+              </tr>
+              <tr>
+                <td>Enter</td>
+                <td><code>"\r"</code></td>
+                <td>In a frontend fake shell, turn it into <code>\r\n$ </code>; with a real PTY, write it directly to the PTY.</td>
+              </tr>
+              <tr>
+                <td>Backspace</td>
+                <td><code>"\x7f"</code></td>
+                <td>A fake shell can visually erase with <code>"\b \b"</code>, while also updating the command buffer.</td>
+              </tr>
+              <tr>
+                <td>Ctrl+C</td>
+                <td><code>"\x03"</code></td>
+                <td>A fake shell may show <code>^C</code>; a real PTY passes it to the shell/process.</td>
+              </tr>
+              <tr>
+                <td>Arrow keys</td>
+                <td><code>"\x1b[A"</code>, etc.</td>
+                <td>Real shell/readline/zle handles history and line editing. The frontend should not parse it itself.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="callout">
+          <strong>Core pitfall: screen content is not program state.</strong>
+          <p>
+            In a fake terminal, seeing <code>abc</code> on screen does not mean JavaScript knows the current command is <code>abc</code>. You must maintain <code>command</code>, clear it after Enter, and update both state and screen on Backspace.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="pty">
+      <aside class="section-kicker">
+        <div class="section-number">03</div>
+        <h2>Shell and PTY</h2>
+        <p>A PTY is not mainly about multiple connections. It gives the shell real terminal semantics.</p>
+      </aside>
+
+      <div class="content">
+        <div class="cards">
+          <article class="card">
+            <h3>A shell is a normal program</h3>
+            <p>
+              <code>zsh</code>, <code>bash</code>, <code>fish</code>, and <code>powershell</code> are shells. They parse commands, generate prompts, maintain the current directory, and start child processes.
+            </p>
+          </article>
+          <article class="card">
+            <h3>A PTY is a pseudo-terminal device</h3>
+            <p>
+              A PTY is like a pipe disguised as a real terminal. The shell believes it is attached to a terminal, so it enables interactive mode, colors, history, fullscreen programs, and job control.
+            </p>
+          </article>
+          <article class="card">
+            <h3>child_process is not enough</h3>
+            <p>
+              <code>child_process</code> is good for one-shot commands. Long-lived interactive sessions, vim/top/less, Ctrl+C, resize, and arrow-key history strongly call for a PTY.
+            </p>
+          </article>
+        </div>
+
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th>Better fit</th>
+                <th>Why</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Run <code>git status</code> and only need final text</td>
+                <td><strong>child_process</strong></td>
+                <td>One-shot task; no terminal semantics needed.</td>
+              </tr>
+              <tr>
+                <td>Open a long-lived zsh session in the browser</td>
+                <td><strong>PTY</strong></td>
+                <td>Needs prompt, history, completion, and interactive input.</td>
+              </tr>
+              <tr>
+                <td>Run <code>vim</code>, <code>top</code>, or <code>less</code></td>
+                <td><strong>PTY</strong></td>
+                <td>Fullscreen programs depend on rows/cols, cursor control, and raw mode.</td>
+              </tr>
+              <tr>
+                <td>Stream <code>npm install</code> logs</td>
+                <td><strong>Depends</strong></td>
+                <td>If you only need logs, child_process can work; for terminal-like progress and colors, PTY is closer.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="code-block">
+          <div class="code-title"><span>Minimal node-pty structure</span><span class="mono">server.js</span></div>
+          <pre><code>import pty from "node-pty";
+
+const shell = process.env.SHELL || "/bin/zsh";
+
+const ptyProcess = pty.spawn(shell, [], {
+  name: "xterm-color",
+  cols: 80,
+  rows: 24,
+  cwd: process.cwd(),
+  env: process.env,
+});
+
+ptyProcess.onData((data) => {
+  socket.send(data);
+});
+
+socket.addEventListener("message", (event) => {
+  ptyProcess.write(event.data.toString());
+});
+
+socket.addEventListener("close", () => {
+  ptyProcess.kill();
+});</code></pre>
+        </div>
+
+        <div class="callout">
+          <strong>After connecting a real PTY, the frontend should not echo input.</strong>
+          <p>
+            When the user presses <code>a</code>, xterm.js fires <code>onData("a")</code>, and the frontend sends it to the PTY. After TTY/shell echo, the output returns through WebSocket to <code>term.write</code>. If the frontend also calls <code>term.write(data)</code>, you may see <code>aa</code>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="web-terminal">
+      <aside class="section-kicker">
+        <div class="section-number">04</div>
+        <h2>Minimal Web Terminal</h2>
+        <p>The frontend only bridges data; the backend owns the PTY session.</p>
+      </aside>
+
+      <div class="content">
+        <figure class="diagram">
+          <svg viewBox="0 0 980 360" role="img" aria-label="Input, output, and resize data lanes">
+            <defs>
+              <marker id="arrow2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto">
+                <path d="M0,0 L0,6 L9,3 z" fill="oklch(38% 0.05 220)" />
+              </marker>
+              <style>
+                .lane{fill:none;stroke:oklch(38% 0.05 220);stroke-width:3;marker-end:url(#arrow2)}
+                .lane2{fill:none;stroke:oklch(55% 0.14 155);stroke-width:3;marker-end:url(#arrow2)}
+                .lane3{fill:none;stroke:oklch(72% 0.15 72);stroke-width:3;marker-end:url(#arrow2)}
+                .node{fill:oklch(99% 0.006 178);stroke:oklch(78% 0.025 190);stroke-width:2}
+                .title{font:800 22px Avenir Next, sans-serif;fill:oklch(20% 0.035 222)}
+                .copy{font:500 15px Avenir Next, sans-serif;fill:oklch(45% 0.035 222)}
+                .label{font:800 15px SFMono-Regular, monospace;fill:oklch(20% 0.035 222)}
+              </style>
+            </defs>
+            <rect x="50" y="85" width="210" height="170" rx="8" class="node" />
+            <text x="155" y="137" text-anchor="middle" class="title">Frontend</text>
+            <text x="155" y="170" text-anchor="middle" class="copy">xterm.js + FitAddon</text>
+            <text x="155" y="198" text-anchor="middle" class="copy">WebSocket client</text>
+
+            <rect x="385" y="85" width="210" height="170" rx="8" class="node" />
+            <text x="490" y="137" text-anchor="middle" class="title">Server</text>
+            <text x="490" y="170" text-anchor="middle" class="copy">ws server</text>
+            <text x="490" y="198" text-anchor="middle" class="copy">protocol parser</text>
+
+            <rect x="720" y="85" width="210" height="170" rx="8" class="node" />
+            <text x="825" y="137" text-anchor="middle" class="title">PTY</text>
+            <text x="825" y="170" text-anchor="middle" class="copy">zsh / bash</text>
+            <text x="825" y="198" text-anchor="middle" class="copy">rows / cols</text>
+
+            <path d="M260 130 H384" class="lane" />
+            <text x="322" y="113" text-anchor="middle" class="label">input</text>
+
+            <path d="M595 130 H719" class="lane" />
+            <text x="657" y="113" text-anchor="middle" class="label">pty.write</text>
+
+            <path d="M720 207 H596" class="lane2" />
+            <text x="658" y="235" text-anchor="middle" class="label">onData</text>
+
+            <path d="M385 207 H261" class="lane2" />
+            <text x="323" y="235" text-anchor="middle" class="label">term.write</text>
+
+            <path d="M155 255 C155 310 490 315 490 256" class="lane3" />
+            <text x="322" y="325" text-anchor="middle" class="label">resize: cols / rows</text>
+          </svg>
+          <figcaption class="caption">
+            A minimal protocol needs two frontend message types: <code>input</code>, written unchanged to the PTY, and <code>resize</code>, used to adjust PTY rows/cols. Backend output is always written back to xterm.js unchanged.
+          </figcaption>
+        </figure>
+
+        <div class="two-col">
+          <div class="code-block">
+            <div class="code-title"><span>Frontend bridge</span><span class="mono">main.js</span></div>
+            <pre><code>const ws = new WebSocket("ws://localhost:3001");
+const fitAddon = new FitAddon();
+const term = new Terminal({ scrollback: 1000 });
+
+term.loadAddon(fitAddon);
+term.open(container);
+fitAddon.fit();
+
+term.onData((data) => {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({ type: "input", data }));
+  }
+});
+
+ws.addEventListener("message", (event) => {
+  term.write(event.data);
+});
+
+function sendResize() {
+  if (ws.readyState === WebSocket.OPEN) {
+    ws.send(JSON.stringify({
+      type: "resize",
+      cols: term.cols,
+      rows: term.rows,
+    }));
+  }
+}</code></pre>
+          </div>
+
+          <div class="code-block">
+            <div class="code-title"><span>Backend protocol</span><span class="mono">server.js</span></div>
+            <pre><code>socket.addEventListener("message", (event) => {
+  try {
+    const payload = JSON.parse(event.data.toString());
+
+    if (payload.type === "input") {
+      ptyProcess.write(payload.data);
+    }
+
+    if (payload.type === "resize") {
+      ptyProcess.resize(payload.cols, payload.rows);
+    }
+  } catch (error) {
+    console.error("invalid ws message", error);
+  }
+});</code></pre>
+          </div>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <h3>FitAddon</h3>
+            <p>
+              <code>fitAddon.fit()</code> computes how many columns and rows the frontend terminal should have. It must run after <code>term.open(container)</code>.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Resize sync</h3>
+            <p>
+              Frontend fitting only changes xterm.js dimensions. To make <code>vim</code> and <code>top</code> render correctly, send <code>term.cols</code> and <code>term.rows</code> to backend <code>pty.resize</code>.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Resource cleanup</h3>
+            <p>
+              The frontend removes resize listeners and calls <code>term.dispose()</code>, <code>fitAddon.dispose()</code>, and <code>ws.close()</code>. The backend calls <code>ptyProcess.kill()</code> after socket close.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="deep">
+      <aside class="section-kicker">
+        <div class="section-number">05</div>
+        <h2>Deeper Topics</h2>
+        <p>ANSI, paste behavior, raw/cooked mode, and echo are all part of how terminals really work.</p>
+      </aside>
+
+      <div class="content">
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Sequence</th>
+                <th>Meaning</th>
+                <th>How to remember it</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><code>\x1b[31m</code></td>
+                <td>Set foreground color to red</td>
+                <td>ESC + SGR parameters. It remains active until reset.</td>
+              </tr>
+              <tr>
+                <td><code>\x1b[0m</code></td>
+                <td>Reset styling</td>
+                <td>Colored CLI output is often “set color, write text, reset.”</td>
+              </tr>
+              <tr>
+                <td><code>\x1b[2J</code></td>
+                <td>Clear screen</td>
+                <td>Often paired with <code>\x1b[H</code>.</td>
+              </tr>
+              <tr>
+                <td><code>\x1b[H</code></td>
+                <td>Move cursor to top-left</td>
+                <td>Fullscreen programs work by moving the cursor and repainting regions.</td>
+              </tr>
+              <tr>
+                <td><code>\x1b[K</code></td>
+                <td>Clear current line from cursor to end</td>
+                <td>Common during prompt redraws and history navigation.</td>
+              </tr>
+              <tr>
+                <td><code>\x1b[?2004h</code></td>
+                <td>Enable bracketed paste</td>
+                <td>The shell asks the terminal to wrap pasted content.</td>
+              </tr>
+              <tr>
+                <td><code>\x1b[200~...\x1b[201~</code></td>
+                <td>Pasted content boundary</td>
+                <td>The frontend should not split it; pass it unchanged to the PTY.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="two-col">
+          <article class="card">
+            <h3>ANSI is stateful</h3>
+            <p>
+              After <code>term.write("\x1b[31mred ")</code>, later text stays red unless <code>\x1b[0m</code> resets it. A terminal is more like “current brush state” than HTML element styling.
+            </p>
+          </article>
+          <article class="card">
+            <h3>Clearing is not moving home</h3>
+            <p>
+              <code>\x1b[2J</code> clears the screen; <code>\x1b[H</code> moves the cursor. To write at the top-left, use <code>\x1b[2J\x1b[H</code>.
+            </p>
+          </article>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <h3>copy / paste</h3>
+            <p>
+              Copy usually relies on browser selection and clipboard behavior. Paste enters the xterm.js input stream, then goes through <code>onData</code> to the PTY. Multi-line paste may arrive as one chunk wrapped in bracketed paste markers.
+            </p>
+          </article>
+          <article class="card">
+            <h3>cooked mode</h3>
+            <p>
+              TTY/shell buffers a line and handles echo, Backspace, and Ctrl+C. Common with normal shell prompts and simple commands.
+            </p>
+          </article>
+          <article class="card">
+            <h3>raw mode</h3>
+            <p>
+              The program receives key data as directly as possible and handles arrows, Ctrl+C, and screen repainting itself. Common with <code>vim</code>, <code>top</code>, and <code>htop</code>.
+            </p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section" id="debug">
+      <aside class="section-kicker">
+        <div class="section-number">06</div>
+        <h2>Debug Checklist</h2>
+        <p>When pressing <code>a</code> does not display anything, do not guess. Walk the chain layer by layer.</p>
+      </aside>
+
+      <div class="content">
+        <div class="debug-flow">
+          <div class="debug-step">Did frontend <code>term.onData</code> receive <code>"a"</code>?</div>
+          <div class="debug-step">Did frontend <code>ws.send</code> send <code>{ type: "input", data: "a" }</code>?</div>
+          <div class="debug-step">Did backend WebSocket <code>message</code> receive the payload?</div>
+          <div class="debug-step">Did the backend call <code>ptyProcess.write("a")</code>?</div>
+          <div class="debug-step">Did backend <code>ptyProcess.onData</code> receive echoed output?</div>
+          <div class="debug-step">Did backend <code>socket.send</code> send the output back to the browser?</div>
+          <div class="debug-step">Did frontend WebSocket <code>message</code> receive output?</div>
+          <div class="debug-step">Did the frontend call <code>term.write(output)</code>?</div>
+          <div class="debug-step">Are xterm.js DOM size, focus, and dispose state normal?</div>
+        </div>
+
+        <div class="table">
+          <table>
+            <thead>
+              <tr>
+                <th>Symptom</th>
+                <th>First suspect</th>
+                <th>Explanation</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Typed characters appear twice</td>
+                <td>Double echo from frontend and shell</td>
+                <td>After PTY connection, the frontend should not call <code>term.write(data)</code>.</td>
+              </tr>
+              <tr>
+                <td>Enter does not move to the start of the next line</td>
+                <td>Only <code>\n</code> was used, or only <code>\r</code> was returned</td>
+                <td>Terminals commonly use <code>\r\n</code> for “start of next line.”</td>
+              </tr>
+              <tr>
+                <td>vim/top display is misaligned</td>
+                <td>Frontend and backend rows/cols do not match</td>
+                <td>After FitAddon, send resize and call backend <code>pty.resize</code>.</td>
+              </tr>
+              <tr>
+                <td>Color codes look like garbage text</td>
+                <td>You are looking at ANSI in logs, not rendered screen output</td>
+                <td><code>\u001b[31m</code> is a control sequence; xterm.js parses and renders it.</td>
+              </tr>
+              <tr>
+                <td>node-pty fails to start</td>
+                <td>Node version, native build, helper permissions, shell path</td>
+                <td>It is not a pure JS package; on macOS, <code>spawn-helper</code> needs execute permission.</td>
+              </tr>
+              <tr>
+                <td>Backend shell remains after closing the page</td>
+                <td>WebSocket / PTY cleanup is missing</td>
+                <td>Frontend calls <code>ws.close()</code>; backend calls <code>ptyProcess.kill()</code>.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="footer">
+          <h2>Final Memory Hook</h2>
+          <p>
+            xterm.js is a terminal emulator, not a shell. In a real Web Terminal, the frontend only sends input to the backend, writes backend output back to the terminal, syncs size, and manages resources. Command parsing, prompts, history, completion, Ctrl+C, and vim/top-style interaction come from the shell, TTY, and PTY.
+          </p>
+          <p class="mono">
+            xterm.js onData -> WebSocket -> node-pty.write -> shell -> pty.onData -> WebSocket -> term.write
+          </p>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
